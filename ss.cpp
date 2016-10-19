@@ -1,7 +1,7 @@
 // ss.cpp - stepping stone program listens for requests and
 //          transfers file via addresses in chainfile
 // Author: K. Brett Mulligan
-// Date: Sep 2016
+// Date: Oct 2016
 // CSU - Comp Sci
 // CS457 - Networks
 // Dr. Indrajit Ray
@@ -21,7 +21,8 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <unistd.h>
-
+#include <pthread.h>
+#include <vector>
 using namespace std;
 
 const int MAX_CHARS = 255;
@@ -31,6 +32,9 @@ int start_listening(int portreq);
 string get_ip();
 
 
+int read_request(int connectionfd);
+int thread_request(string url, vector<string> chainlist);
+void* process_request(void *args);
 
 
 
@@ -135,6 +139,8 @@ int start_listening (int portreq) {
         //cout << "Good connection!" << endl;
         //cout << "Connection from : " << peeraddrstr << endl;
         cout << "Received connection..." << endl;
+
+        read_request(connectedfd);
     }
     
     freeaddrinfo(res);
@@ -194,4 +200,43 @@ string get_ip () {
     ip = string(ipstr);
 
     return ip;
+}
+
+
+int read_request(int connectionfd) {
+
+    cout << "Reading new file request..." << endl;
+
+
+    // receive URL 
+    string requested_url;
+
+    // receive chainfile
+    vector<string> chainlist;
+
+    process_request(&requested_url);
+
+    return 0;
+}
+
+int thread_request(string url, vector<string> chainlist) {
+
+    cout << "Threading new file request..." << endl;
+   
+    pthread_attr_t *attributes = NULL;
+    pthread_t *thread = NULL;
+    vector<string> args;
+    
+    pthread_create(thread, attributes, &process_request, &args); 
+
+    return 0;
+}
+
+void* process_request(void *args) {
+
+    cout << "Processing new file request..." << endl;
+   
+    
+
+    return 0;
 }
