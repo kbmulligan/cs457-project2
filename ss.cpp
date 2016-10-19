@@ -26,15 +26,35 @@
 using namespace std;
 
 const int MAX_CHARS = 255;
+const int MAX_URL_SIZE = MAX_CHARS;
 const int BACKLOG = 1;
 
+// DATA ///////////////////////////////////////////////////
+class FileRequest {
+
+    string url;
+    int num_ss;
+    vector<string> chainlist;
+
+    public:
+        FileRequest (string new_url, int new_num_ss, vector<string> new_chainlist) {
+            url = new_url;
+            num_ss = new_num_ss;
+            chainlist = new_chainlist;
+        }
+
+};
+
+
+// FUNCTIONS //////////////////////////////////////////////
 int start_listening(int portreq);
 string get_ip();
 
 
 int read_request(int connectionfd);
-int thread_request(string url, vector<string> chainlist);
+int thread_request(FileRequest req);
 void* process_request(void *args);
+
 
 
 
@@ -209,25 +229,31 @@ int read_request(int connectionfd) {
 
 
     // receive URL 
-    string requested_url;
+    string requested_url(MAX_URL_SIZE, '0');
+     
 
     // receive chainfile
     vector<string> chainlist;
 
-    process_request(&requested_url);
+    FileRequest req(requested_url, chainlist.size(), chainlist);
+
+
+    thread_request(req);
 
     return 0;
 }
 
-int thread_request(string url, vector<string> chainlist) {
+int thread_request(FileRequest req) {
 
     cout << "Threading new file request..." << endl;
    
     pthread_attr_t *attributes = NULL;
+    pthread_attr_init(attributes);
+
     pthread_t *thread = NULL;
-    vector<string> args;
     
-    pthread_create(thread, attributes, &process_request, &args); 
+    pthread_create(thread, attributes, &process_request, &req); 
+    pthread_attr_destroy(attributes);
 
     return 0;
 }
