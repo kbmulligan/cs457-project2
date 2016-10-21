@@ -23,11 +23,14 @@
 #include <unistd.h>
 #include <pthread.h>
 #include <vector>
+
 using namespace std;
 
+const bool VERBOSE = true;
 const int MAX_CHARS = 255;
 const int MAX_URL_SIZE = MAX_CHARS;
 const int BACKLOG = 1;
+const int PORT = 55333;
 const string default_filename("index.html");
 const string test_file("https://www.wikipedia.org/portal/wikipedia.org/assets/img/Wikipedia-logo-v2.png");
 
@@ -53,6 +56,7 @@ class FileRequest {
 int start_listening (int portreq);
 string get_ip (void);
 
+int packetize (string msg, void* data);
 
 int retrieve_file (string filename);
 int read_request (int connectionfd);
@@ -63,13 +67,14 @@ int get_file (string fn);
 int chunkify_file (void);
 int transmit_file (void);
 
+int step_to_next (FileRequest *req);
 
 int main (int argc, char* argv[]) {
 
     cout << "Starting stepping stone..." << endl;
 
     int opt = 0;
-    string portval;
+    string portval(to_string(PORT));
 
     while ((opt = getopt(argc, argv, "p:")) != -1) {
         switch (opt) {
@@ -87,10 +92,7 @@ int main (int argc, char* argv[]) {
                 cerr << "getopt error: default ... aborting!" << endl;
                 abort();
         }
-
     }
-
-    char hostname[MAX_CHARS];
 
     
     cout << "Testing... " << endl;
@@ -100,11 +102,10 @@ int main (int argc, char* argv[]) {
     //retrieve_file("https://www.wikipedia.org/portal/wikipedia.org/assets/img/Wikipedia-logo-v2.png");
 
 
+    char hostname[MAX_CHARS];
 
     gethostname(hostname, MAX_CHARS);
     cout << hostname << " " << portval <<  endl;
-
-
 
 
     start_listening(atoi(portval.c_str()));
@@ -283,7 +284,14 @@ void* process_request(void *request) {
 
     cout << "Processing new file request..." << endl;
 
-    get_file(test_file);       
+    vector<string> chainlist;
+
+    if (chainlist.empty()) {                                 // get file if empty
+        get_file(test_file);       
+    } else {                                                 // otherwise, select next ss
+        step_to_next((FileRequest*)request);
+    }
+
 
     return 0;
 }
@@ -316,6 +324,37 @@ int chunkify_file () {
 
 
 int transmit_file () {
+
+    return 0;
+}
+
+
+int step_to_next(FileRequest *req) {
+
+    cout << "Stepping to next stepping stone..." << endl;
+
+    return 0;
+}
+
+int packetize (string url, vector<string> *chainlist, char* data) {
+
+    uint16_t url_len = htons(url.size());
+    uint16_t chainlist_len = htons(chainlist->size());
+
+    if (VERBOSE) {
+       cout << "url_len (network): " << url_len << endl;
+       cout << "chainlist_len (network): " << chainlist_len << endl;
+    }
+
+    // manually copy header info and message to data
+    memcpy(data, &url_len, sizeof(url_len));
+    memcpy(&(data[2]), &chainlist_len, sizeof(chainlist_len));
+    memcpy(&(data[4]), url.c_str(), strlen(url.c_str()));
+
+
+    // NOT COMPLETE
+
+
 
     return 0;
 }
