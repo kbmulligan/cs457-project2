@@ -24,6 +24,8 @@
 #include <pthread.h>
 #include <vector>
 
+#include "steps.h"
+
 using namespace std;
 
 const bool VERBOSE = true;
@@ -35,21 +37,6 @@ const string default_filename("index.html");
 const string test_file("https://www.wikipedia.org/portal/wikipedia.org/assets/img/Wikipedia-logo-v2.png");
 
 
-// DATA ///////////////////////////////////////////////////
-class FileRequest {
-
-    string url;
-    int num_ss;
-    vector<string> chainlist;
-
-    public:
-        FileRequest (string new_url, int new_num_ss, vector<string> new_chainlist) {
-            url = new_url;
-            num_ss = new_num_ss;
-            chainlist = new_chainlist;
-        }
-
-};
 
 
 // FUNCTIONS //////////////////////////////////////////////
