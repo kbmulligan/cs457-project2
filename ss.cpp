@@ -28,6 +28,9 @@ using namespace std;
 const int MAX_CHARS = 255;
 const int MAX_URL_SIZE = MAX_CHARS;
 const int BACKLOG = 1;
+const string default_filename("index.html");
+const string test_file("https://www.wikipedia.org/portal/wikipedia.org/assets/img/Wikipedia-logo-v2.png");
+
 
 // DATA ///////////////////////////////////////////////////
 class FileRequest {
@@ -47,15 +50,18 @@ class FileRequest {
 
 
 // FUNCTIONS //////////////////////////////////////////////
-int start_listening(int portreq);
-string get_ip();
+int start_listening (int portreq);
+string get_ip (void);
 
 
-int read_request(int connectionfd);
-int thread_request(FileRequest req);
-void* process_request(void *args);
+int retrieve_file (string filename);
+int read_request (int connectionfd);
+int thread_request (FileRequest *req);
+void* process_request (void *request);
 
-
+int get_file (string fn);
+int chunkify_file (void);
+int transmit_file (void);
 
 
 int main (int argc, char* argv[]) {
@@ -86,8 +92,20 @@ int main (int argc, char* argv[]) {
 
     char hostname[MAX_CHARS];
 
+    
+    cout << "Testing... " << endl;
+    
+    cout << "testing file retrieve... " << endl;
+    //retrieve_file("http://csb.stanford.edu/class/public/pages/sykes_webdesign/05_simple.html");
+    //retrieve_file("https://www.wikipedia.org/portal/wikipedia.org/assets/img/Wikipedia-logo-v2.png");
+
+
+
     gethostname(hostname, MAX_CHARS);
     cout << hostname << " " << portval <<  endl;
+
+
+
 
     start_listening(atoi(portval.c_str()));
     
@@ -238,31 +256,66 @@ int read_request(int connectionfd) {
     FileRequest req(requested_url, chainlist.size(), chainlist);
 
 
-    thread_request(req);
+    thread_request(&req);
 
     return 0;
 }
 
-int thread_request(FileRequest req) {
+int thread_request(FileRequest *req) {
 
     cout << "Threading new file request..." << endl;
    
-    pthread_attr_t *attributes = NULL;
-    pthread_attr_init(attributes);
+    //pthread_attr_t *attributes = NULL;
+    //pthread_attr_init(attributes);
 
-    pthread_t *thread = NULL;
+    pthread_t thread = 0;
     
-    pthread_create(thread, attributes, &process_request, &req); 
-    pthread_attr_destroy(attributes);
+    //pthread_create(&thread, attributes, &process_request, req); 
+    pthread_create(&thread, NULL, &process_request, req); 
+    pthread_join(thread, NULL);
+
+    //pthread_attr_destroy(attributes);
 
     return 0;
 }
 
-void* process_request(void *args) {
+void* process_request(void *request) {
 
     cout << "Processing new file request..." << endl;
-   
-    
+
+    get_file(test_file);       
+
+    return 0;
+}
+
+int get_file (string fn) {
+
+    retrieve_file(fn);
+
+    chunkify_file();
+
+    transmit_file();
+
+    return 0;
+}
+ 
+int retrieve_file(string filename) {
+
+    string command("wget ");
+    command += filename;
+    system(command.c_str());
+
+    return 0;
+}
+
+
+int chunkify_file () {
+
+    return 0;
+}
+
+
+int transmit_file () {
 
     return 0;
 }
