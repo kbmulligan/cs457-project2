@@ -108,7 +108,7 @@ int start_listening (int portreq) {
     int sockfd, connectedfd = -1;
 
     memset(&hints, 0, sizeof(hints));
-    hints.ai_family = AF_UNSPEC;
+    hints.ai_family = AF_INET;
     hints.ai_socktype = SOCK_STREAM;
     hints.ai_flags = AI_PASSIVE;       // use the IP of this machine
 
@@ -123,9 +123,9 @@ int start_listening (int portreq) {
     for (p = res; p != NULL; p = p->ai_next) {
         usable_addresses++;
         
-        cout << "Address info : ";
         char ipaddrstr[INET6_ADDRSTRLEN];
         inet_ntop(p->ai_family, &((struct sockaddr_in *)(res->ai_addr))->sin_addr, ipaddrstr, INET6_ADDRSTRLEN); 
+        cout << "Address info : ";
         cout << ipaddrstr << endl;
     } 
     cout << "getaddrinfo usable addresses : " << usable_addresses << endl;
