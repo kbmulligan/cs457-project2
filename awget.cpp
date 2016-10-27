@@ -29,7 +29,7 @@ using namespace std;
 
 
 // FUNCTIONS //////////////////////////////////////////////
-
+int usage (char* argv[]);
 
 int main (int argc, char* argv[]) {
 
@@ -56,12 +56,58 @@ int main (int argc, char* argv[]) {
         }
     }
 
-    
-    cout << "Using chainfile: " << chainfile << endl;
-    
-    cout << "Testing... " << endl;
+    string url;
+    int non_opt_args = 0;
+    for (int index = optind; index < argc; index++) {
+        //cout << "Non-option argument: " << argv[index] << endl;
+        url = argv[index];
+        non_opt_args++;
+    }
+    if (non_opt_args != 1) {                         // check for URL arg
+        cout << "Non optional arguments: " << non_opt_args << endl;
+        usage(argv);
+    }
 
-    read_chainfile(chainfile);
+    //cout << "Testing... " << endl;
+
+
+
+    // process chainfile, convert to common delimeter 
+    cout << "Using chainfile: " << chainfile << endl;
+   
+    // read chainlist from file 
+    string chainlist_str = read_chainfile(chainfile);
+    cout << chainlist_str << endl;
+
+    // parse and convert
+    vector<string> chainlist = parse_chainlist(chainlist_str);
+    chainlist = convert_delimiter(chainlist, IPPORT_FILE_DELIM, IPPORT_DELIM);
+
+    //for (unsigned int i = 0; i < chainlist.size(); i++) {
+    //    cout << chainlist[i] << endl;
+    //}
+   
+    // repack and print 
+    chainlist_str = pack_chainlist(chainlist);
+    cout << chainlist_str << endl;
+
+    // build request and print
+    FileRequest req(url, chainlist.size(), chainlist);
+    req.print();
     
+    vector<string> ss = pick_rand_ss(chainlist);    
+    
+    cout << "Selected: " << ss[0] << " : " << ss[1] << endl;
+
+    cout << "Connecting..." << endl;
+
+    connect_to_ss(ss); 
+
+    return 0;
+}
+
+int usage (char* argv[]) {
+    cout << "Usage: " << argv[0] << " [-c CHAINFILE] URL" << endl; 
+    exit(0);
     return 0;
 }

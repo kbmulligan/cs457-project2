@@ -32,6 +32,7 @@ using namespace std;
 
 // FUNCTIONS //////////////////////////////////////////////
 
+
 string get_ip () {
  
     string ip;
@@ -129,12 +130,11 @@ vector<string> parse_chainlist (string raw_chain) {
 }
 
 // takes ip:port and splits ip from port 
-vector<string> parse_socketpair (string raw_data) {
+vector<string> parse_socketpair (string raw_data, char delim) {
 
     vector<string> socketpair;
 
     stringstream streamlist(raw_data);
-    char delim = IPPORT_DELIM;
 
     string item;
 
@@ -145,18 +145,40 @@ vector<string> parse_socketpair (string raw_data) {
     return socketpair;
 }
 
+vector<string> convert_delimiter (vector<string> chainlist, char old_delim, char new_delim) {
+   
+    vector<string> chainlist_new; 
+    for (unsigned int i = 0; i < chainlist.size(); i++) {
+        vector<string> pair = parse_socketpair(chainlist[i], old_delim);
+        string new_chainitem(pair[0] + new_delim + pair[1]);
+        chainlist_new.push_back(new_chainitem);
+    }
+    
+    return chainlist_new;
+}
+
 string read_chainfile (string filename) {
 
     string chainlist;
 
     ifstream chainfile(filename.c_str());
 
+    string num_steps;
+    getline(chainfile, num_steps);
+    int chainlist_size = atoi(num_steps.c_str());
+
     string line;
+    int chain_items = 0;
     while (getline(chainfile, line)) {
         chainlist += line;
         chainlist += CHAINLIST_DELIM;
+        chain_items++;
     }
     chainlist.pop_back();             // remove last delim char
+
+    if (chain_items != chainlist_size) {
+        cout << "read_chainfile error: sizes don't match" << endl;
+    }
     
     return chainlist;
 }
@@ -200,4 +222,61 @@ int packetize (string url, vector<string> *chainlist, char* data) {
 
 
     return 0;
+}
+
+// selects a stepping stone from the chain list and returns a string vector of [ip, port]
+vector<string> pick_rand_ss (vector<string> chainlist) {
+   
+    string ss = chainlist.back(); 		// PICKS THE FIRST ONE FOR NOW
+    chainlist.pop_back();
+    return parse_socketpair(ss, IPPORT_DELIM);
+}
+
+// connects to stepping stone ss, return socket file descriptor ---  MUST BE CLOSED LATER!!!
+int connect_to_ss (vector<string> ss) {
+
+    string ip = ss[0];
+    string port = ss[1];
+
+    if (VERBOSE) {
+        cout << "Connecting to..." << endl;
+        cout << "SERVER : " << ip << endl;
+        cout << "PORT   : " << port << endl;
+    }
+
+    struct addrinfo hints, *res;
+    int sockfd = -1;
+
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family = AF_UNSPEC;
+    hints.ai_socktype = SOCK_STREAM;
+
+    int status = getaddrinfo(ip.c_str(), port.c_str(), &hints, &res);
+    if (status == -1) {
+        cerr << "connect_to_ss error: getaddrinfo" << endl;
+        return 2;
+    }
+    
+    sockfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
+    if (status == -1) {
+        cerr << "connect_to_ss error: socket" << endl;
+        return 2;
+    }
+
+    status = connect(sockfd, res->ai_addr, res->ai_addrlen);
+    if (status == -1) {
+        close(sockfd);
+        cerr << "connect_to_ss error: connect failed" << endl;
+        return 2;
+    }
+
+    // done with this addrinfo
+    freeaddrinfo(res);
+    
+    // check if everything's good to go, then start comm
+    if (!sockfd) {
+        cerr << "connect_to_ss error: sockfd == NULL" << endl;
+    }
+    
+    return sockfd;
 }
