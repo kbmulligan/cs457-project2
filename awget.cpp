@@ -23,12 +23,13 @@
 #include <unistd.h>
 #include <vector>
 
-#include "steps.h"
+#include "core.h"
 
 using namespace std;
 
 
 // FUNCTIONS //////////////////////////////////////////////
+
 
 int main (int argc, char* argv[]) {
 
@@ -60,6 +61,7 @@ int main (int argc, char* argv[]) {
     
     cout << "Testing... " << endl;
 
+    read_chainfile(chainfile);
     
     return 0;
 }

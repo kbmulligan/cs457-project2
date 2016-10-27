@@ -13,6 +13,7 @@
 #include <cstdio>
 #include <cstring>
 #include <iostream>
+#include <fstream>
 #include <string>
 #include <sstream>
 #include <sys/types.h>
@@ -24,23 +25,12 @@
 #include <pthread.h>
 #include <vector>
 
-#include "steps.h"
+#include "core.h"
 
 using namespace std;
 
 
 // FUNCTIONS //////////////////////////////////////////////
-string get_ip (void);
-
-int retrieve_file (string filename);
-int read_request (int connectionfd);
-
-short int read_short (int connectionfd);
-int send_short (int connectionfd, short data);
-
-int step_to_next (FileRequest *req);
-
-vector<string> parse_chainlist (string raw_chain);
 
 string get_ip () {
  
@@ -93,7 +83,7 @@ string get_ip () {
     return ip;
 }
 
-short int read_short (int connectionfd) { 
+short read_short (int connectionfd) { 
     short data = 0;
     int bytes_received = recv(connectionfd, &data, sizeof(data), 0);
     if (bytes_received == -1) {
@@ -111,13 +101,23 @@ int send_short (int connectionfd, short data) {
     return 0; 
 }
 
+string pack_chainlist (vector<string> vec_chain) {
+    string chainlist(vec_chain[0]);
+
+    for (unsigned int i = 1; i < vec_chain.size(); i++) {
+        chainlist += CHAINLIST_DELIM;
+        chainlist += vec_chain[i]; 
+    }
+    return chainlist;
+}
+
 // takes raw string of ip's and ports delimited by commas and converts it to a vector to strings
 vector<string> parse_chainlist (string raw_chain) {
 
     vector<string> chainlist;
 
     stringstream streamlist(raw_chain);
-    char delim = ',';
+    char delim = CHAINLIST_DELIM;
 
     string item;
 
@@ -128,6 +128,40 @@ vector<string> parse_chainlist (string raw_chain) {
     return chainlist;
 }
 
+// takes ip:port and splits ip from port 
+vector<string> parse_socketpair (string raw_data) {
+
+    vector<string> socketpair;
+
+    stringstream streamlist(raw_data);
+    char delim = IPPORT_DELIM;
+
+    string item;
+
+    while(getline(streamlist, item, delim)) {
+        socketpair.push_back(item);
+    }
+
+    return socketpair;
+}
+
+string read_chainfile (string filename) {
+
+    string chainlist;
+
+    ifstream chainfile(filename.c_str());
+
+    string line;
+    while (getline(chainfile, line)) {
+        chainlist += line;
+        chainlist += CHAINLIST_DELIM;
+    }
+    chainlist.pop_back();             // remove last delim char
+    
+    return chainlist;
+}
+
+// downloads url "filename" to current working directory
 int retrieve_file(string filename) {
 
     string command("wget ");

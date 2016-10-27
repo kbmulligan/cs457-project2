@@ -24,7 +24,7 @@
 #include <pthread.h>
 #include <vector>
 
-#include "steps.h"
+#include "core.h"
 
 using namespace std;
 
