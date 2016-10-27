@@ -40,6 +40,10 @@ class FileRequest {
             }
             std::cout << std::endl;
         }
+
+        std::string get_url() {
+            return url;
+        }
 };
 
 // FUNCTIONS //////////////////////////////////////////////
@@ -50,6 +54,7 @@ int read_request (int connectionfd);
 
 short read_short (int connectionfd);
 int send_short (int connectionfd, short data);
+std::string read_string (int connectionfd, int string_len);
 
 int step_to_next (FileRequest *req);
 
@@ -62,6 +67,7 @@ std::string pack_chainlist (std::vector<std::string> vec_chain);
 std::vector<std::string> pick_rand_ss (std::vector<std::string> chainlist);
 
 int connect_to_ss (std::vector<std::string> ss);
+
 
 
 #endif

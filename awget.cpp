@@ -101,7 +101,13 @@ int main (int argc, char* argv[]) {
 
     cout << "Connecting..." << endl;
 
-    connect_to_ss(ss); 
+    int ssfd = connect_to_ss(ss);
+
+    // send url length and chainlist length
+    send_short(ssfd, url.size());
+    send_short(ssfd, chainlist_str.size());
+
+
 
     return 0;
 }

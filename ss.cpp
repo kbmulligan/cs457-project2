@@ -189,10 +189,11 @@ int read_request(int connectionfd) {
 
     // receive URL 
     string requested_url(MAX_URL_SIZE, '0');
-     
+    requested_url = read_string(connectionfd, length_url);
 
     // receive chainfile
     vector<string> chainlist;
+    string chainlist_str = read_string(connectionfd, length_chainlist);
 
     FileRequest req(requested_url, chainlist.size(), chainlist);
 
@@ -223,6 +224,10 @@ int thread_request(FileRequest *req) {
 void* process_request(void *request) {
 
     cout << "Processing new file request..." << endl;
+ 
+    FileRequest *req = reinterpret_cast<FileRequest *>(request);
+
+    cout << req->get_url() << endl;
 
     vector<string> chainlist;
 

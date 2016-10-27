@@ -102,6 +102,13 @@ int send_short (int connectionfd, short data) {
     return 0; 
 }
 
+// reads string_legnth bytes of data from socket connectionfd and returns it as string
+string read_string (int connectionfd, int string_length) {
+    string new_string;
+
+    return new_string;
+}
+
 string pack_chainlist (vector<string> vec_chain) {
     string chainlist(vec_chain[0]);
 
