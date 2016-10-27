@@ -1,5 +1,5 @@
-// ss.cpp - stepping stone program listens for requests and
-//          transfers file via addresses in chainfile
+// ss.cpp - stepping stone program
+//          transfers file via addresses in chainlist
 // Author: K. Brett Mulligan
 // Date: Oct 2016
 // CSU - Comp Sci
@@ -28,13 +28,6 @@
 
 using namespace std;
 
-const bool VERBOSE = true;
-const int MAX_CHARS = 255;
-const int MAX_URL_SIZE = MAX_CHARS;
-const int BACKLOG = 1;
-const int PORT = 55333;
-const string default_filename("index.html");
-const string test_file("https://www.wikipedia.org/portal/wikipedia.org/assets/img/Wikipedia-logo-v2.png");
 
 
 
@@ -54,8 +47,15 @@ int get_file (string fn);
 int chunkify_file (void);
 int transmit_file (void);
 
+short int read_short (int connectionfd);
+int send_short (int connectionfd, short data);
+
+
 int step_to_next (FileRequest *req);
 
+
+
+// MAIN SS EXECUTION //////////////////////////////////////
 int main (int argc, char* argv[]) {
 
     cout << "Starting stepping stone..." << endl;
@@ -84,7 +84,7 @@ int main (int argc, char* argv[]) {
     
     cout << "Testing... " << endl;
     
-    cout << "testing file retrieve... " << endl;
+    //cout << "testing file retrieve... " << endl;
     //retrieve_file("http://csb.stanford.edu/class/public/pages/sykes_webdesign/05_simple.html");
     //retrieve_file("https://www.wikipedia.org/portal/wikipedia.org/assets/img/Wikipedia-logo-v2.png");
 
@@ -123,12 +123,12 @@ int start_listening (int portreq) {
     for (p = res; p != NULL; p = p->ai_next) {
         usable_addresses++;
         
-        //cout << "Address info : ";
+        cout << "Address info : ";
         char ipaddrstr[INET6_ADDRSTRLEN];
         inet_ntop(p->ai_family, &((struct sockaddr_in *)(res->ai_addr))->sin_addr, ipaddrstr, INET6_ADDRSTRLEN); 
-        //cout << ipaddrstr << endl;
+        cout << ipaddrstr << endl;
     } 
-    //cout << "getaddrinfo usable addresses : " << usable_addresses << endl;
+    cout << "getaddrinfo usable addresses : " << usable_addresses << endl;
 
     sockfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
     if (status == -1) {
@@ -177,62 +177,15 @@ int start_listening (int portreq) {
 }
 
 
-string get_ip () {
- 
-    string ip;
-
-    struct addrinfo hints, *res, *p;
-    int status;
-    char ipstr[INET6_ADDRSTRLEN];
-
-    memset(&hints, 0, sizeof(hints));
-    hints.ai_family = AF_UNSPEC;
-    hints.ai_socktype = SOCK_STREAM;
-    hints.ai_flags = AI_PASSIVE;
-
-
-    char hostname[64];
-
-    gethostname(hostname, 64);
-    
-    //cout << "Getting hostname : " << hostname << endl;
-    status = getaddrinfo(hostname,  NULL, &hints, &res); 
-    if (status != 0) {
-        cerr << "getaddrinfo: " << gai_strerror(status) << endl;
-        return string("ERROR: check cerr");
-    }
-
-    for (p = res; p != NULL; p = p->ai_next) {
-        void *addr;
-        string ipver;
-
-        if (p->ai_family == AF_INET) {
-            struct sockaddr_in *ipv4 = (struct sockaddr_in *)p->ai_addr;
-            addr = &(ipv4->sin_addr);
-            ipver = string("IPv4");
-        } else {
-            struct sockaddr_in6 *ipv6 = (struct sockaddr_in6 *)p->ai_addr;
-            addr = &(ipv6->sin6_addr);
-            ipver = string("IPv6");
-        }
-
-        inet_ntop(p->ai_family, addr, ipstr, sizeof(ipstr));
-        //cout << ipver << " : " << ipstr << endl;
-
-    }
-
-    freeaddrinfo(res);
-
-    ip = string(ipstr);
-
-    return ip;
-}
-
-
 int read_request(int connectionfd) {
 
     cout << "Reading new file request..." << endl;
 
+    short int length_url = read_short(connectionfd);
+    short int length_chainlist = read_short(connectionfd);
+
+    cout << "URL len: " << length_url << endl;
+    cout << "Chainlist len: " << length_chainlist << endl;
 
     // receive URL 
     string requested_url(MAX_URL_SIZE, '0');
@@ -273,9 +226,9 @@ void* process_request(void *request) {
 
     vector<string> chainlist;
 
-    if (chainlist.empty()) {                                 // get file if empty
+    if (chainlist.empty()) {                     // get file if no more steping stones 
         get_file(test_file);       
-    } else {                                                 // otherwise, select next ss
+    } else {                                     // otherwise, select next ss
         step_to_next((FileRequest*)request);
     }
 
@@ -294,14 +247,6 @@ int get_file (string fn) {
     return 0;
 }
  
-int retrieve_file(string filename) {
-
-    string command("wget ");
-    command += filename;
-    system(command.c_str());
-
-    return 0;
-}
 
 
 int chunkify_file () {
@@ -315,33 +260,3 @@ int transmit_file () {
     return 0;
 }
 
-
-int step_to_next(FileRequest *req) {
-
-    cout << "Stepping to next stepping stone..." << endl;
-
-    return 0;
-}
-
-int packetize (string url, vector<string> *chainlist, char* data) {
-
-    uint16_t url_len = htons(url.size());
-    uint16_t chainlist_len = htons(chainlist->size());
-
-    if (VERBOSE) {
-       cout << "url_len (network): " << url_len << endl;
-       cout << "chainlist_len (network): " << chainlist_len << endl;
-    }
-
-    // manually copy header info and message to data
-    memcpy(data, &url_len, sizeof(url_len));
-    memcpy(&(data[2]), &chainlist_len, sizeof(chainlist_len));
-    memcpy(&(data[4]), url.c_str(), strlen(url.c_str()));
-
-
-    // NOT COMPLETE
-
-
-
-    return 0;
-}

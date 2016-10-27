@@ -4,6 +4,16 @@
 #include <vector>
 #include <string>
 
+// CONSTANTS //////////////////////////////////////////////
+const bool VERBOSE = true;
+const int MAX_CHARS = 255;
+const int MAX_URL_SIZE = MAX_CHARS;
+const int BACKLOG = 1;
+const int PORT = 55333;
+const std::string default_filename("index.html");
+const std::string test_file("https://www.wikipedia.org/portal/wikipedia.org/assets/img/Wikipedia-logo-v2.png");
+const std::string DEFAULT_CHAINFILE("chaingang.txt");
+
 // DATA ///////////////////////////////////////////////////
 class FileRequest {
 
