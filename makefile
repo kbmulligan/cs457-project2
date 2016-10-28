@@ -13,5 +13,3 @@ ss: ss.cpp
 
 clean:
 	rm core.o
-	rm ss.o
-	rm awget.o
