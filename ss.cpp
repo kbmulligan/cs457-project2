@@ -38,14 +38,14 @@ string get_ip (void);
 
 int packetize (string msg, void* data);
 
-int retrieve_file (string filename);
 int read_request (int connectionfd);
 int thread_request (FileRequest *req);
 void* process_request (void *request);
 
-int get_file (string fn);
+int capture_file (string fn);
 int chunkify_file (void);
 int transmit_file (void);
+int delete_local_file (void);
 
 short int read_short (int connectionfd);
 int send_short (int connectionfd, short data);
@@ -196,7 +196,7 @@ int read_request(int connectionfd) {
         string chainlist_str = read_string(connectionfd, length_chainlist);
     }
 
-    FileRequest req(requested_url, chainlist.size(), chainlist);
+    FileRequest req(requested_url, chainlist.size(), chainlist, connectionfd);
 
 
     thread_request(&req);
@@ -233,7 +233,7 @@ void* process_request(void *request) {
 
     if (req->get_chainlist_ref()->empty()) {     // get file if no more steping stones 
         cout << "Chainlist was empty...getting file... " << endl; 
-        get_file(url);       
+        capture_file(url);       
     } else {                                     // otherwise, select next ss
         cout << "Chainlist was non-empty...stepping... " << endl; 
         step_to_next(req);
@@ -243,13 +243,15 @@ void* process_request(void *request) {
     return 0;
 }
 
-int get_file (string fn) {
+int capture_file (string fn) {
 
     retrieve_file(fn);
 
     chunkify_file();
 
     transmit_file();
+
+    delete_local_file();
 
     return 0;
 }
@@ -267,3 +269,7 @@ int transmit_file () {
     return 0;
 }
 
+int delete_local_file () {
+
+    return 0;
+}

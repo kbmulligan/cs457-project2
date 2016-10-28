@@ -26,12 +26,15 @@ class FileRequest {
     std::string url;
     int num_ss;
     std::vector<std::string> chainlist;
+    int sfd;
 
     public:
-        FileRequest (std::string new_url, int new_num_ss, std::vector<std::string> new_chainlist) {
+        FileRequest (std::string new_url, int new_num_ss, 
+                     std::vector<std::string> new_chainlist, int socketfd) {
             url = new_url;
             num_ss = new_num_ss;
             chainlist = new_chainlist;
+            sfd = socketfd;
         }
         
         void print (void) {
@@ -44,12 +47,16 @@ class FileRequest {
             std::cout << std::endl;
         }
 
-        std::string get_url() {
+        std::string get_url () {
             return url;
         }
 
-        std::vector<std::string> * get_chainlist_ref() {
+        std::vector<std::string> * get_chainlist_ref () {
             return &chainlist;
+        }
+
+        int get_socket () {
+            return sfd;
         }
 
 };
