@@ -17,6 +17,9 @@ const char IPPORT_DELIM = ':';
 const char IPPORT_FILE_DELIM = ' ';
 const char CHAINLIST_DELIM = ',';
 
+class Chainlist;
+class FileRequest;
+
 // DATA ///////////////////////////////////////////////////
 class FileRequest {
 
@@ -44,6 +47,30 @@ class FileRequest {
         std::string get_url() {
             return url;
         }
+
+        std::vector<std::string> * get_chainlist_ref() {
+            return &chainlist;
+        }
+
+};
+
+class Chainlist {
+
+    std::vector<std::string> chainlist;
+
+    public:
+        Chainlist (std::vector<std::string> newlist) {
+            chainlist = newlist;
+        }
+
+        std::vector<std::string> get_chainlist () {
+            return chainlist;
+        }
+
+        std::string get_chainlist_str () {
+            std::string list;
+            return list;
+        }
 };
 
 // FUNCTIONS //////////////////////////////////////////////
@@ -55,6 +82,7 @@ int read_request (int connectionfd);
 short read_short (int connectionfd);
 int send_short (int connectionfd, short data);
 std::string read_string (int connectionfd, int string_len);
+int send_string (int connectionfd, std::string str);
 
 int step_to_next (FileRequest *req);
 
@@ -64,10 +92,10 @@ std::vector<std::string> parse_chainlist (std::string raw_chain);
 std::string read_chainfile (std::string filename);
 std::vector<std::string> convert_delimiter (std::vector<std::string> chainlist, char old_delim, char new_delim);
 std::string pack_chainlist (std::vector<std::string> vec_chain);
-std::vector<std::string> pick_rand_ss (std::vector<std::string> chainlist);
+std::vector<std::string> pick_rand_ss (std::vector<std::string> *chainlist);
 
 int connect_to_ss (std::vector<std::string> ss);
 
-
+int wait_for_file (int sfd);
 
 #endif

@@ -104,17 +104,39 @@ int send_short (int connectionfd, short data) {
 
 // reads string_legnth bytes of data from socket connectionfd and returns it as string
 string read_string (int connectionfd, int string_length) {
-    string new_string;
-
+    
+    char buffer[string_length];
+    int status = read(connectionfd, buffer, string_length); 
+    if (status < string_length) {
+       cout << "read_string didn't read it all! read: " << status << " bytes" << endl; 
+    }
+    string new_string(buffer);
     return new_string;
 }
 
-string pack_chainlist (vector<string> vec_chain) {
-    string chainlist(vec_chain[0]);
+int send_string (int connectionfd, string str) {
+    int flags = 0;
+    char string_data[str.size()];
+    strcpy(string_data, str.c_str());
+    int status = send(connectionfd, &string_data, str.size(), flags);
+    if (status == -1) {
+        cout << "send_string: send failed" << endl;
+    }
+    return 0;
+}
 
-    for (unsigned int i = 1; i < vec_chain.size(); i++) {
-        chainlist += CHAINLIST_DELIM;
-        chainlist += vec_chain[i]; 
+string pack_chainlist (vector<string> vec_chain) {
+    string chainlist = "";
+    
+    if (!vec_chain.empty()) {
+        chainlist += vec_chain[0];
+
+        for (unsigned int i = 1; i < vec_chain.size(); i++) {
+            chainlist += CHAINLIST_DELIM;
+            chainlist += vec_chain[i]; 
+        }
+    } else {
+        cout << "Empty chainlist" << endl;
     }
     return chainlist;
 }
@@ -145,10 +167,13 @@ vector<string> parse_socketpair (string raw_data, char delim) {
 
     string item;
 
+    //cout << "Iterating through socket pair..." << endl;
+
     while(getline(streamlist, item, delim)) {
         socketpair.push_back(item);
     }
-
+ 
+    cout << "parse_socketpair: " << socketpair[0] << " " << socketpair[1] << endl;    
     return socketpair;
 }
 
@@ -193,6 +218,7 @@ string read_chainfile (string filename) {
 // downloads url "filename" to current working directory
 int retrieve_file(string filename) {
 
+    cout << "Retrieving file..." << endl;
     string command("wget ");
     command += filename;
     system(command.c_str());
@@ -204,6 +230,43 @@ int retrieve_file(string filename) {
 int step_to_next(FileRequest *req) {
 
     cout << "Stepping to next stepping stone..." << endl;
+
+    // select next stepping stone 
+    cout << "Selecting next ss..." << endl;
+
+    //cout << "Size of chainlist: " << chainlist.size() << endl;
+    vector<string> ss = pick_rand_ss(req->get_chainlist_ref());    
+    //cout << "Size of chainlist: " << chainlist.size() << endl;
+
+
+
+    //cout << "About to repack chainlist...do we get this far?" << endl;
+
+
+
+    // stringify chainlist after stepping stone removal above
+    string chainlist_str = pack_chainlist(*(req->get_chainlist_ref()));
+    
+    cout << "Connecting..." << endl;
+    
+    int ssfd = connect_to_ss(ss);
+
+    string url = req->get_url();
+
+    // send url length and chainlist length
+    send_short(ssfd, url.size());
+    send_short(ssfd, chainlist_str.size());
+
+    send_string(ssfd, url);
+    if (chainlist_str.size() > 0) {
+        send_string(ssfd, chainlist_str);
+    }
+
+    cout << "URL and chainlist sent!" << endl;
+
+    wait_for_file(ssfd);
+
+    
 
     return 0;
 }
@@ -232,10 +295,16 @@ int packetize (string url, vector<string> *chainlist, char* data) {
 }
 
 // selects a stepping stone from the chain list and returns a string vector of [ip, port]
-vector<string> pick_rand_ss (vector<string> chainlist) {
-   
-    string ss = chainlist.back(); 		// PICKS THE FIRST ONE FOR NOW
-    chainlist.pop_back();
+vector<string> pick_rand_ss (vector<string> *chainlist) {
+  
+    cout << "Assigning stepping stone from last item in chainlist..." << endl;
+    string ss(chainlist->back()); 		// PICKS THE FIRST ONE FOR NOW
+    cout << ss << endl;
+    
+    cout << "Removing stepping stone from chainlist..." << endl; 
+    chainlist->pop_back();
+    cout << "Done." << endl;
+
     return parse_socketpair(ss, IPPORT_DELIM);
 }
 
@@ -287,3 +356,15 @@ int connect_to_ss (vector<string> ss) {
     
     return sockfd;
 }
+
+int wait_for_file (int sfd) {
+
+    cout << "Waiting for file..." << endl;
+    while (true) {
+        ;
+    } 
+
+    return 0;
+}
+
+

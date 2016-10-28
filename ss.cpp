@@ -51,7 +51,6 @@ short int read_short (int connectionfd);
 int send_short (int connectionfd, short data);
 
 
-int step_to_next (FileRequest *req);
 
 
 
@@ -193,7 +192,9 @@ int read_request(int connectionfd) {
 
     // receive chainfile
     vector<string> chainlist;
-    string chainlist_str = read_string(connectionfd, length_chainlist);
+    if (length_chainlist > 0) {
+        string chainlist_str = read_string(connectionfd, length_chainlist);
+    }
 
     FileRequest req(requested_url, chainlist.size(), chainlist);
 
@@ -227,14 +228,15 @@ void* process_request(void *request) {
  
     FileRequest *req = reinterpret_cast<FileRequest *>(request);
 
-    cout << req->get_url() << endl;
+    cout << "FileRequest.url = " << req->get_url() << endl;
+    string url(req->get_url());
 
-    vector<string> chainlist;
-
-    if (chainlist.empty()) {                     // get file if no more steping stones 
-        get_file(test_file);       
+    if (req->get_chainlist_ref()->empty()) {     // get file if no more steping stones 
+        cout << "Chainlist was empty...getting file... " << endl; 
+        get_file(url);       
     } else {                                     // otherwise, select next ss
-        step_to_next((FileRequest*)request);
+        cout << "Chainlist was non-empty...stepping... " << endl; 
+        step_to_next(req);
     }
 
 

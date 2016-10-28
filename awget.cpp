@@ -92,22 +92,38 @@ int main (int argc, char* argv[]) {
     cout << chainlist_str << endl;
 
     // build request and print
-    FileRequest req(url, chainlist.size(), chainlist);
-    req.print();
+    //FileRequest req(url, chainlist.size(), chainlist);
+    //req.print();
+   
+    // select next stepping stone 
+    cout << "Selecting next ss..." << endl;
+
+    cout << "Size of chainlist: " << chainlist.size() << endl;
+    vector<string> ss = pick_rand_ss(&chainlist);    
+    cout << "Size of chainlist: " << chainlist.size() << endl;
+
+    //cout << "About to repack chainlist...do we get this far?" << endl;
+    // stringify chainlist after stepping stone removal above
+    chainlist_str = pack_chainlist(chainlist);
     
-    vector<string> ss = pick_rand_ss(chainlist);    
-    
-    cout << "Selected: " << ss[0] << " : " << ss[1] << endl;
+    //cout << "Selected: " << ss[0] << " : " << ss[1] << endl;
 
     cout << "Connecting..." << endl;
-
+    
     int ssfd = connect_to_ss(ss);
 
     // send url length and chainlist length
     send_short(ssfd, url.size());
     send_short(ssfd, chainlist_str.size());
 
+    send_string(ssfd, url);
+    if (chainlist_str.size() > 0) {
+        send_string(ssfd, chainlist_str);
+    }
 
+    cout << "URL and chainlist sent!" << endl;
+
+    wait_for_file(ssfd);
 
     return 0;
 }
