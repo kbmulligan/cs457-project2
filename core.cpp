@@ -104,7 +104,9 @@ int send_short (int connectionfd, short data) {
 
 // reads string_legnth bytes of data from socket connectionfd and returns it as string
 string read_string (int connectionfd, int string_length) {
-    
+   
+    cout << "Reading string... " << endl; 
+
     char buffer[string_length];
     int status = read(connectionfd, buffer, string_length); 
     if (status < string_length) {
@@ -115,9 +117,11 @@ string read_string (int connectionfd, int string_length) {
 }
 
 int send_string (int connectionfd, string str) {
+
     int flags = 0;
     char string_data[str.size()];
-    strcpy(string_data, str.c_str());
+    strcpy(string_data, str.c_str()); // copy str into string_data location
+
     int status = send(connectionfd, &string_data, str.size(), flags);
     int size = str.size();
     if ( status == -1 || (status != size) ) {
@@ -357,14 +361,73 @@ int connect_to_ss (vector<string> ss) {
     return sockfd;
 }
 
+
+// waits for packets sent in the format [SIZE, DATA...]
 int wait_for_file (int sfd) {
 
     cout << "Waiting for file..." << endl;
-    while (true) {
-        ;
+
+    // data buffer for whole file
+    int filesize = 0;
+
+    vector<Chunk> chunks;                           // this is where we stick the data
+
+    short packet_size = read_short(sfd);
+    while (packet_size > 0) {
+        
+        cout << "Reading packet data..." << endl;
+
+        filesize += packet_size;                     // adjust filesize by packetsize
+
+        char *buffer = (char *)malloc(packet_size);  // allocate memory and read
+        int bytes_read = read(sfd, buffer, packet_size);
+        if (bytes_read < packet_size) {
+            cout << "wait_for_file didn't read all of packet!" << endl;
+        }
+
+        Chunk new_chunk(buffer, packet_size);        // make new chunk
+        chunks.push_back(new_chunk);                 // append to vector
+
+        packet_size = read_short(sfd);               // prep for next round
     } 
+
+    for (unsigned int i = 0; i < chunks.size(); i++) {
+        filesize += chunks[i].get_size();
+    }
+
+    cout << "Chunks read: " << chunks.size() << endl;
+    cout << "Total file size: " << filesize << endl;
+
+    write_file(chunks); 
 
     return 0;
 }
 
+int write_file (vector<Chunk> chunks) {
 
+    cout << "Writing file... " << endl;
+
+    fstream ofile("package.file", ios::binary | ios::out | ios::app);
+
+    if ( !ofile.is_open() ) {
+        cout << "File is not open...probably error opening file" << endl;
+    } else {
+        for (unsigned int i = 0; i < chunks.size(); i++) {
+            ofile.write(chunks[i].get_data(), chunks[i].get_size());
+        }
+    }
+
+    ofile.close();
+     
+    return 0;
+}
+
+// given a socket, waits to receive 16-bit field indicating number of bytes,
+// then reads that number of bytes from the socket
+// returns 0 on success, -1 on not enough data received
+int receive_packet (int sfd) {
+
+    
+
+    return 0;
+}

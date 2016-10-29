@@ -181,4 +181,8 @@ int connect_to_ss (std::vector<std::string> ss);
 
 int wait_for_file (int sfd);
 
+int receive_packet (int sfd);
+
+int write_file (std::vector<Chunk> chunks);
+
 #endif

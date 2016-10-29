@@ -155,7 +155,7 @@ int start_listening (int portreq) {
     socklen_t peeraddrsize = sizeof(peeraddr);
 
     connectedfd = accept(sockfd, (struct sockaddr *)&peeraddr, &peeraddrsize);
-    if (status == -1) {
+    if (connectedfd == -1) {
         cerr << "start_listening error: accept" << endl;
         return 2;
     } else {
@@ -187,8 +187,7 @@ int read_request(int connectionfd) {
     cout << "Chainlist len: " << length_chainlist << endl;
 
     // receive URL 
-    string requested_url(MAX_URL_SIZE, '0');
-    requested_url = read_string(connectionfd, length_url);
+    string requested_url = read_string(connectionfd, length_url);
 
     // receive chainfile
     vector<string> chainlist;
@@ -247,7 +246,7 @@ void* process_request(void *request) {
 
     transmit_file(fn, req->get_socket());
 
-    //delete_local_file(fn);
+    delete_local_file(fn);
     
 
     return 0;
