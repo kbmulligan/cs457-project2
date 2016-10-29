@@ -43,14 +43,14 @@ int thread_request (FileRequest *req);
 void* process_request (void *request);
 
 int capture_file (string fn);
-int chunkify_file (void);
-int transmit_file (void);
-int delete_local_file (void);
+int chunkify_file (string filename);
+int transmit_file (string fn, int sfd);
+int delete_local_file (string fn);
 
 short int read_short (int connectionfd);
 int send_short (int connectionfd, short data);
 
-
+string local_filename (string filename);
 
 
 
@@ -196,9 +196,10 @@ int read_request(int connectionfd) {
         string chainlist_str = read_string(connectionfd, length_chainlist);
     }
 
+    // build request
     FileRequest req(requested_url, chainlist.size(), chainlist, connectionfd);
 
-
+    // start new thread
     thread_request(&req);
 
     return 0;
@@ -233,43 +234,52 @@ void* process_request(void *request) {
 
     if (req->get_chainlist_ref()->empty()) {     // get file if no more steping stones 
         cout << "Chainlist was empty...getting file... " << endl; 
-        capture_file(url);       
+        retrieve_file(url);       
     } else {                                     // otherwise, select next ss
         cout << "Chainlist was non-empty...stepping... " << endl; 
-        step_to_next(req);
+        int ssfd = step_to_next(req);
+        wait_for_file(ssfd);
     }
 
+    string fn = local_filename(url);
+
+    chunkify_file(fn);
+
+    transmit_file(fn, req->get_socket());
+
+    //delete_local_file(fn);
+    
 
     return 0;
 }
 
-int capture_file (string fn) {
+int chunkify_file (string fn) {
 
-    retrieve_file(fn);
+    cout << "Chunking file: " << fn << "(" << fn.size() << ")" << endl;
 
-    chunkify_file();
-
-    transmit_file();
-
-    delete_local_file();
-
-    return 0;
-}
- 
-
-
-int chunkify_file () {
+    FileTarget package(fn);
+    cout << "File size: " << package.get_size() << endl;
 
     return 0;
 }
 
 
-int transmit_file () {
+int transmit_file (string fn, int sfd) {
+    cout << "Transmitting file: " << fn << " on socket: " << sfd << endl;
 
     return 0;
 }
 
-int delete_local_file () {
-
+int delete_local_file (string fn) {
+    cout << "Deleting file: " << fn << endl;
+    string command = "rm " + fn;
+    system(command.c_str());
     return 0;
+}
+
+// strips first part of URL, leaving only the filename with extension
+string local_filename (string filename) {
+    int index = filename.rfind("/"); 
+    string fn = filename.substr( index + 1, filename.size() - (index + 2) );
+    return fn; 
 }

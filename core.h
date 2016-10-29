@@ -3,6 +3,8 @@
 
 #include <vector>
 #include <string>
+#include <fstream>
+#include <iostream>
 
 // CONSTANTS //////////////////////////////////////////////
 const bool VERBOSE = true;
@@ -16,6 +18,8 @@ const std::string DEFAULT_CHAINFILE("chaingang.txt");
 const char IPPORT_DELIM = ':';
 const char IPPORT_FILE_DELIM = ' ';
 const char CHAINLIST_DELIM = ',';
+
+const int MAX_CHUNK_SIZE = 65000;
 
 class Chainlist;
 class FileRequest;
@@ -79,6 +83,78 @@ class Chainlist {
             return list;
         }
 };
+
+class Chunk {
+
+    char *data;
+    int size;
+
+    public:
+        Chunk (void* raw_data, int sizeofdata) {
+            size = sizeofdata;             // copy size
+            data = (char *)malloc(size);   // allocate memory
+            memcpy(data, raw_data, size);  // copy data
+        }
+
+        ~Chunk () {
+            free(data);
+        }
+
+        int get_size () {
+            return size;
+        }        
+
+        char* get_data () {
+            return data;
+        }
+
+};
+
+class FileTarget {
+
+    std::string filename;
+    std::vector<Chunk> chunks;
+    std::ifstream ifs;
+
+    public:
+        FileTarget (std::string fn) {
+            std::cout << "Create File object..." << std::endl;
+            filename = fn;
+            ifs.open(filename, std::ios::in | std::ios::binary); 
+            std::cout << "Filename: " << filename << std::endl;
+
+            if (ifs.good()) {
+                std::cout << "File is good..." << std::endl;
+            } else {
+                std::cout << "File is bad..." << std::endl;
+            }
+        }
+
+        ~FileTarget () {
+            ifs.close();
+        }
+        
+        std::vector<Chunk> get_chunks () {
+            return chunks;
+        }
+
+        int get_num_chunks () {
+            return chunks.size();
+        }
+
+        void chunkify () {
+            ;
+        }
+
+        int get_size () {
+            int size = 0;
+            ifs.seekg(0, ifs.end);
+            size = ifs.tellg();
+            return size;
+        }
+};      
+
+
 
 // FUNCTIONS //////////////////////////////////////////////
 std::string get_ip (void);

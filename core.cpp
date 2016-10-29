@@ -119,8 +119,9 @@ int send_string (int connectionfd, string str) {
     char string_data[str.size()];
     strcpy(string_data, str.c_str());
     int status = send(connectionfd, &string_data, str.size(), flags);
-    if (status == -1) {
-        cout << "send_string: send failed" << endl;
+    int size = str.size();
+    if ( status == -1 || (status != size) ) {
+        cout << "send_string: send failed, status: " << status << endl;
     }
     return 0;
 }
@@ -226,7 +227,7 @@ int retrieve_file(string filename) {
     return 0;
 }
 
-
+// returns socket file descriptoer to next stepping stone selected
 int step_to_next(FileRequest *req) {
 
     cout << "Stepping to next stepping stone..." << endl;
@@ -264,11 +265,10 @@ int step_to_next(FileRequest *req) {
 
     cout << "URL and chainlist sent!" << endl;
 
-    wait_for_file(ssfd);
 
     
 
-    return 0;
+    return ssfd;
 }
 
 int packetize (string url, vector<string> *chainlist, char* data) {
