@@ -115,6 +115,7 @@ class FileTarget {
     std::string filename;
     std::vector<Chunk> chunks;
     std::ifstream ifs;
+    char *data;
 
     public:
         FileTarget (std::string fn) {
@@ -132,6 +133,7 @@ class FileTarget {
 
         ~FileTarget () {
             ifs.close();
+            free(data);
         }
         
         std::vector<Chunk> get_chunks () {
@@ -142,14 +144,43 @@ class FileTarget {
             return chunks.size();
         }
 
+        void print () {
+            std::cout << "--- FileTarget ---" << std::endl;
+            std::cout << "Filename: " << filename << std::endl;
+            std::cout << "File stream: " << ifs.good() << std::endl;
+
+            for (unsigned int i = 0; i < chunks.size(); i++) {
+                std::cout << "Chunk " << i << ": size " << chunks[i].get_size() << std::endl;
+            }
+        }
+
         void chunkify () {
-            ;
+            //read_file();
+            
+            while (ifs.tellg() < get_size()) {
+                char *buffer = (char *)malloc(MAX_CHUNK_SIZE);
+                ifs.read(buffer, MAX_CHUNK_SIZE); 
+
+                Chunk chunk(buffer, ifs.gcount());
+                chunks.push_back(chunk);                 // add chunk
+            }
+
+
+        }
+
+        void read_file() {
+            int size = get_size();
+            data = (char *)malloc(size);
+            ifs.read(data, size); 
         }
 
         int get_size () {
-            int size = 0;
-            ifs.seekg(0, ifs.end);
-            size = ifs.tellg();
+            int loc = ifs.tellg();     // record current marker location
+
+            ifs.seekg(0, ifs.end);     // seek all the way to the EOF
+            int size = ifs.tellg();
+
+            ifs.seekg(loc);            // reset get marker
             return size;
         }
 };      

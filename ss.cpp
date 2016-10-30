@@ -240,7 +240,7 @@ void* process_request(void *request) {
         wait_for_file(ssfd);
     }
 
-    string fn = local_filename(url);
+    string fn = local_filename(url);             // strips url to filename only
 
     chunkify_file(fn);
 
@@ -265,6 +265,9 @@ int chunkify_file (string fn) {
 
 int transmit_file (string fn, int sfd) {
     cout << "Transmitting file: " << fn << " on socket: " << sfd << endl;
+
+    int packetsize = 10;
+    send_short(sfd, packetsize);
 
     return 0;
 }

@@ -1,15 +1,17 @@
 CC = "g++"
+CFLAGS = "-Wall -Werror -std=c++11"
 
-all: core ss awget
+all: core.o ss awget
 
-core: core.cpp
-	$(CC) -Wall -Werror -std=c++11 -pthread -c core.cpp
 
-awget: awget.cpp
-	$(CC) -Wall -Werror -std=c++11 -pthread -o awget awget.cpp core.cpp
+awget: awget.cpp core.cpp
+	$(CC) $(CLFAGS) -pthread core.cpp awget.cpp -o awget 
 
-ss: ss.cpp
-	$(CC) -Wall -Werror -std=c++11 -pthread -o ss ss.cpp core.cpp
+ss: ss.cpp core.cpp
+	$(CC) $(CLFAGS) -pthread core.cpp ss.cpp -o ss 
+
+core.o: core.cpp
+	$(CC) $(CLFAGS) -c core.cpp
 
 clean:
 	rm core.o

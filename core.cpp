@@ -105,7 +105,7 @@ int send_short (int connectionfd, short data) {
 // reads string_legnth bytes of data from socket connectionfd and returns it as string
 string read_string (int connectionfd, int string_length) {
    
-    cout << "Reading string... " << endl; 
+    cout << "Reading string... of length: " << string_length << " on socket: " << connectionfd << endl; 
 
     char buffer[string_length];
     int status = read(connectionfd, buffer, string_length); 
@@ -117,6 +117,8 @@ string read_string (int connectionfd, int string_length) {
 }
 
 int send_string (int connectionfd, string str) {
+
+    cout << "Sending string... of length: " << str.size() << " on socket: " << connectionfd << endl; 
 
     int flags = 0;
     char string_data[str.size()];
