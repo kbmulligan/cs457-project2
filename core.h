@@ -121,7 +121,7 @@ class FileTarget {
         FileTarget (std::string fn) {
             std::cout << "Create File object..." << std::endl;
             filename = fn;
-            ifs.open(filename, std::ios::in | std::ios::binary); 
+            ifs.open(filename.c_str(), std::fstream::in | std::fstream::binary); 
             std::cout << "Filename: " << filename << std::endl;
 
             if (ifs.good()) {

@@ -213,7 +213,7 @@ string read_chainfile (string filename) {
         chainlist += CHAINLIST_DELIM;
         chain_items++;
     }
-    chainlist.pop_back();             // remove last delim char
+    chainlist = chainlist.substr(0, chainlist.size() - 1);             // remove last delim char
 
     if (chain_items != chainlist_size) {
         cout << "read_chainfile error: sizes don't match" << endl;
