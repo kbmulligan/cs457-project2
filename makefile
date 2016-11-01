@@ -15,3 +15,5 @@ core.o: core.cpp
 
 clean:
 	rm core.o
+	rm awget
+	rm ss

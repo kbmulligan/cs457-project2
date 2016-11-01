@@ -23,6 +23,11 @@ ss usage:
 ss [-p PORT]
 
 
+
+Other notes:
+There is no awget.h but core.h should have what awget.h should have had.
+
+
 Credits:
 Beej's Guide to Network Programming
 

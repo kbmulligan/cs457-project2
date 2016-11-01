@@ -20,7 +20,7 @@ const char IPPORT_DELIM = ':';
 const char IPPORT_FILE_DELIM = ' ';
 const char CHAINLIST_DELIM = ',';
 const int MAX_FAILS = 100;
-const int MAX_CHUNK_SIZE = 512;
+const int MAX_CHUNK_SIZE = 1024;
 
 class Chainlist;
 class FileRequest;
