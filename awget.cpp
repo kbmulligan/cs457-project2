@@ -30,6 +30,7 @@ using namespace std;
 
 // FUNCTIONS //////////////////////////////////////////////
 int usage (char* argv[]);
+string clean_url(string url);
 
 int main (int argc, char* argv[]) {
 
@@ -68,6 +69,8 @@ int main (int argc, char* argv[]) {
         usage(argv);
     }
 
+    url = clean_url(url);
+    cout << "Requesting file: " << url << endl;
 
     // process chainfile, convert to common delimeter 
     cout << "Using chainfile: " << chainfile << endl;
@@ -130,8 +133,21 @@ int main (int argc, char* argv[]) {
     return 0;
 }
 
+string clean_url (string url) {
+
+    if (url.find('/') == string::npos) { 
+        url += "/index.html";
+    }    
+    if (url.find('/') == url.size() - 1) {
+        url += "index.html";
+    }
+    return url;
+}
+
 int usage (char* argv[]) {
     cout << "Usage: " << argv[0] << " [-c CHAINFILE] URL" << endl; 
     exit(0);
     return 0;
 }
+
+
