@@ -1,0 +1,28 @@
+awget
+..............................
+
+by K. Brett Mulligan
+CSU CS457 
+Dr. Ray
+Oct 2016
+
+awget retrieves a file over a network like wget. However, awget uses a list of 
+intermediate servers to hide the origin of the request. awget takes a URL as an
+argument as well as an optional argument which is a list of IP addresses and 
+ports which give the IP's of servers running the ss program explained below.
+URL must be a full file path.
+
+awget usage:
+awget URL [-c CHAINFILE]
+
+ss is a server companion to awget. ss listens for connections on an optional
+port and then reads a file retrieval request from that port in the format of
+a URL and a list of IP's and ports, which give further stepping stones.
+
+ss usage:
+ss [-p PORT]
+
+
+Credits:
+Beej's Guide to Network Programming
+
