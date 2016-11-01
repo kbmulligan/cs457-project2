@@ -12,6 +12,7 @@
 #include <cstdlib>
 #include <cstdio>
 #include <cstring>
+#include <ctime>
 #include <iostream>
 #include <fstream>
 #include <string>
@@ -123,8 +124,10 @@ int send_long (int connectionfd, long data) {
 
 // reads string_legnth bytes of data from socket connectionfd and returns it as string
 string read_string (int connectionfd, int string_length) {
-   
-    cout << "Reading string... of length: " << string_length << " on socket: " << connectionfd << endl; 
+  
+    if (VERBOSE) { 
+       cout << "Reading string... of length: " << string_length << " on socket: " << connectionfd << endl; 
+    }
 
     int flags = 0;
     char *buffer = (char *)malloc(string_length);
@@ -142,7 +145,9 @@ string read_string (int connectionfd, int string_length) {
 
 int send_string (int connectionfd, string str) {
 
-    cout << "Sending string... of length: " << str.size() << " on socket: " << connectionfd << endl; 
+    if (VERBOSE) {
+        cout << "Sending string... of length: " << str.size() << " on socket: " << connectionfd << endl; 
+    }
 
     int flags = 0;
     char string_data[str.size()];
@@ -167,7 +172,9 @@ string pack_chainlist (vector<string> vec_chain) {
             chainlist += vec_chain[i]; 
         }
     } else {
-        cout << "Empty chainlist" << endl;
+        if (VERBOSE) {
+            cout << "Empty chainlist" << endl;
+        }
     }
     return chainlist;
 }
@@ -250,7 +257,7 @@ string read_chainfile (string filename) {
 int retrieve_file(string filename) {
 
     cout << "Retrieving file..." << endl;
-    string command("wget ");
+    string command("wget -q ");
     command += filename;
     system(command.c_str());
 
@@ -262,18 +269,7 @@ int step_to_next(FileRequest *req) {
 
     cout << "Stepping to next stepping stone..." << endl;
 
-    // select next stepping stone 
-    cout << "Selecting next ss..." << endl;
-
-    //cout << "Size of chainlist: " << chainlist.size() << endl;
     vector<string> ss = pick_rand_ss(req->get_chainlist_ref());    
-    //cout << "Size of chainlist: " << chainlist.size() << endl;
-
-
-
-    //cout << "About to repack chainlist...do we get this far?" << endl;
-
-
 
     // stringify chainlist after stepping stone removal above
     string chainlist_str = pack_chainlist(*(req->get_chainlist_ref()));
@@ -293,10 +289,9 @@ int step_to_next(FileRequest *req) {
         send_string(ssfd, chainlist_str);
     }
 
-    cout << "URL and chainlist sent!" << endl;
-
-
-    
+    if (VERBOSE) {
+        cout << "URL and chainlist sent!" << endl;
+    }
 
     return ssfd;
 }
@@ -327,13 +322,16 @@ int packetize (string url, vector<string> *chainlist, char* data) {
 // selects a stepping stone from the chain list and returns a string vector of [ip, port]
 vector<string> pick_rand_ss (vector<string> *chainlist) {
   
-    cout << "Assigning stepping stone from last item in chainlist..." << endl;
-    string ss(chainlist->back()); 		// PICKS THE FIRST ONE FOR NOW
+    srand(time(NULL));
+    int index = rand() % chainlist->size(); 
+
+    string ss = chainlist->at(index);
     cout << ss << endl;
     
-    cout << "Removing stepping stone from chainlist..." << endl; 
-    chainlist->pop_back();
-    cout << "Done." << endl;
+    if (VERBOSE) {
+        cout << "Removing stepping stone from chainlist..." << endl; 
+    }
+    chainlist->erase(chainlist->begin() + index);
 
     return parse_socketpair(ss, IPPORT_DELIM);
 }
@@ -407,8 +405,10 @@ int wait_for_file (FileRequest* req, int socketfd) {
     long file_size = read_long(sfd);                     // read header (filesize, chunks)
     long chunks_to_read = read_long(sfd);
 
-    cout << "Total file size expected: " << file_size << endl;
-    cout << "Chunks to read: " << chunks_to_read << endl;
+    if (VERBOSE) { 
+        cout << "Total file size expected: " << file_size << endl;
+        cout << "Chunks to read: " << chunks_to_read << endl;
+    }
 
     // data buffer for whole file
     char data_buffer[file_size];                           // initialize total filesize
@@ -418,9 +418,11 @@ int wait_for_file (FileRequest* req, int socketfd) {
 
     short packet_size = read_short(sfd);
     while (packet_size > 0) {
-        
-        cout << "Reading packet data..." << endl;
-        cout << "Expecting packet of size: " << packet_size << " bytes..." << endl;
+       
+        if (VERBOSE) { 
+            cout << "Reading packet data..." << endl;
+            cout << "Expecting packet of size: " << packet_size << " bytes..." << endl;
+        }
 
         data_buffer_size += packet_size;                   // adjust filesize by packetsize
 
@@ -438,7 +440,10 @@ int wait_for_file (FileRequest* req, int socketfd) {
             total_bytes_read += bytes_read;
 
             if (packet_bytes_read < packet_size) {
-                cout << "wait_for_file didn't read all of packet! " << bytes_read << " bytes read" << endl;
+                
+                if (VERBOSE) { 
+                    cout << "wait_for_file didn't read all of packet! " << bytes_read << " bytes read" << endl;
+                }
                 fails++;
                 
                 if (bytes_read == 0) {
@@ -447,7 +452,9 @@ int wait_for_file (FileRequest* req, int socketfd) {
                 }
 
             } else {
-                cout << "Bytes read: " << bytes_read << endl;
+                if (VERBOSE) { 
+                    cout << "Bytes read: " << bytes_read << endl;
+                }
             }
 
             // write the data we just read to buffer
@@ -455,7 +462,9 @@ int wait_for_file (FileRequest* req, int socketfd) {
 
         }
         chunks_read += 1;
-        cout << "Packet bytes read: " << packet_bytes_read << endl;
+        if (VERBOSE) {
+            cout << "Packet bytes read: " << packet_bytes_read << endl;
+        }
 
 
         if (chunks_read < chunks_to_read) {
@@ -465,8 +474,10 @@ int wait_for_file (FileRequest* req, int socketfd) {
         }
     } 
 
-    cout << "Chunks read: " << chunks_read << endl;
-    cout << "Total file size: " << total_bytes_read << endl;
+    if (VERBOSE) { 
+        cout << "Chunks read: " << chunks_read << endl;
+        cout << "Total file size: " << total_bytes_read << endl;
+    }
 
     if (total_bytes_read < file_size) {
         cout << "total_bytes_read < file_size so probably not all of file was received" << endl;
@@ -475,12 +486,16 @@ int wait_for_file (FileRequest* req, int socketfd) {
     string output_fn = local_filename(req->get_url());
     write_file(data_buffer, total_bytes_read, output_fn); 
 
+    cout << "Received file " << output_fn << endl;
+
     return 0;
 }
 
 int write_file (char* buffer, int buffer_size, string fn) {
 
-    cout << "Writing file... " << endl;
+    if (VERBOSE) {
+        cout << "Writing file... " << endl;
+    }
 
     fstream ofile(fn.c_str(), fstream::binary | fstream::out);
 
@@ -499,9 +514,6 @@ int write_file (char* buffer, int buffer_size, string fn) {
 // then reads that number of bytes from the socket
 // returns 0 on success, -1 on not enough data received
 int receive_packet (int sfd) {
-
-    
-
     return 0;
 }
 
@@ -514,7 +526,9 @@ int transmit_packet (int sfd, char* data, int size) {
     if (status < size) {
         cout << "transmit_packet: not all data sent, status: " << status << endl;
     } else {
-        cout << "Packet sent, size: " << size  << endl;
+        if (VERBOSE) {
+            cout << "Packet sent, size: " << size  << endl;
+        }
     }
 
     return 0;

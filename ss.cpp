@@ -29,7 +29,7 @@
 using namespace std;
 
 
-
+vector<pthread_t> all_threads;
 
 
 // FUNCTIONS //////////////////////////////////////////////
@@ -80,18 +80,11 @@ int main (int argc, char* argv[]) {
     }
 
     
-    cout << "Testing... " << endl;
     
-    //cout << "testing file retrieve... " << endl;
-    //retrieve_file("http://csb.stanford.edu/class/public/pages/sykes_webdesign/05_simple.html");
-    //retrieve_file("https://www.wikipedia.org/portal/wikipedia.org/assets/img/Wikipedia-logo-v2.png");
-
-
     char hostname[MAX_CHARS];
 
-    gethostname(hostname, MAX_CHARS);
-    cout << hostname << " " << portval <<  endl;
-
+    //gethostname(hostname, MAX_CHARS);
+    //cout << hostname << " " << portval <<  endl;
 
     start_listening(atoi(portval.c_str()));
     
@@ -101,6 +94,8 @@ int main (int argc, char* argv[]) {
 
 int start_listening (int portreq) {
     
+    //cout << "Waiting... " << endl;
+
     string port(to_string(portreq)); 
     struct addrinfo hints, *res, *p;
     int sockfd, connectedfd = -1;
@@ -123,10 +118,14 @@ int start_listening (int portreq) {
         
         char ipaddrstr[INET6_ADDRSTRLEN];
         inet_ntop(p->ai_family, &((struct sockaddr_in *)(res->ai_addr))->sin_addr, ipaddrstr, INET6_ADDRSTRLEN); 
-        cout << "Address info : ";
-        cout << ipaddrstr << endl;
+        if (VERBOSE) {
+            cout << "Address info : ";
+            cout << ipaddrstr << endl;
+        }
     } 
-    cout << "getaddrinfo usable addresses : " << usable_addresses << endl;
+    if (VERBOSE) {
+        cout << "getaddrinfo usable addresses : " << usable_addresses << endl;
+    }
 
     sockfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
     if (status == -1) {
@@ -140,37 +139,39 @@ int start_listening (int portreq) {
         cerr << "start_listening error: bind" << endl;
         return 2;
     }
-    
-    status = listen(sockfd, BACKLOG);
-    if (status == -1) {
-        close(sockfd);
-        cerr << "start_listening error: listen" << endl;
-        return 2;
-    }
- 
-    cout << "Waiting for a connection on " << get_ip() << " port " << port << endl;
 
-    struct sockaddr_storage peeraddr;
-    socklen_t peeraddrsize = sizeof(peeraddr);
 
-    connectedfd = accept(sockfd, (struct sockaddr *)&peeraddr, &peeraddrsize);
-    if (connectedfd == -1) {
-        cerr << "start_listening error: accept" << endl;
-        return 2;
-    } else {
-        char peeraddrstr[INET6_ADDRSTRLEN];
-        inet_ntop(AF_INET, &((struct sockaddr_in*) &peeraddr)->sin_addr, peeraddrstr, INET6_ADDRSTRLEN);
-        //cout << "Good connection!" << endl;
-        //cout << "Connection from : " << peeraddrstr << endl;
-        cout << "Received connection..." << endl;
+    while (true) {    
+	status = listen(sockfd, BACKLOG);
+	if (status == -1) {
+           close(sockfd);
+	   cerr << "start_listening error: listen" << endl;
+           return 2;
+	 }
+	 
+	 cout << "Waiting for a connection on " << get_ip() << " port " << port << endl;
 
-        read_request(connectedfd);
+	 struct sockaddr_storage peeraddr;
+	 socklen_t peeraddrsize = sizeof(peeraddr);
+
+	 connectedfd = accept(sockfd, (struct sockaddr *)&peeraddr, &peeraddrsize);
+	 if (connectedfd == -1) {
+             cerr << "start_listening error: accept" << endl;
+	     return 2;
+	 } else {
+             char peeraddrstr[INET6_ADDRSTRLEN];
+             inet_ntop(AF_INET, &((struct sockaddr_in*) &peeraddr)->sin_addr, peeraddrstr, INET6_ADDRSTRLEN);
+             
+             cout << "Received connection..." << endl;
+
+             read_request(connectedfd);
+	     close(connectedfd);
+	 }
     }
     
     freeaddrinfo(res);
 
     close(sockfd);
-    close(connectedfd);
     return 0;
 }
 
@@ -182,8 +183,10 @@ int read_request(int connectionfd) {
     short int length_url = read_short(connectionfd);
     short int length_chainlist = read_short(connectionfd);
 
-    cout << "URL len: " << length_url << endl;
-    cout << "Chainlist len: " << length_chainlist << endl;
+    if (VERBOSE) {
+        cout << "URL len: " << length_url << endl;
+        cout << "Chainlist len: " << length_chainlist << endl;
+    }
 
     // receive URL 
     string requested_url = read_string(connectionfd, length_url);
@@ -208,17 +211,14 @@ int read_request(int connectionfd) {
 int thread_request(FileRequest *req) {
 
     cout << "Threading new file request..." << endl;
-   
-    //pthread_attr_t *attributes = NULL;
-    //pthread_attr_init(attributes);
 
     pthread_t thread = 0;
     
-    //pthread_create(&thread, attributes, &process_request, req); 
     pthread_create(&thread, NULL, &process_request, req); 
-    pthread_join(thread, NULL);
 
-    //pthread_attr_destroy(attributes);
+    all_threads.push_back(thread);                         // add to master list of threads
+
+    pthread_join(thread, NULL);
 
     return 0;
 }
@@ -229,11 +229,13 @@ void* process_request(void *request) {
  
     FileRequest *req = reinterpret_cast<FileRequest *>(request);
 
-    cout << "FileRequest.url = " << req->get_url() << endl;
+    cout << "Requested file URL: " << req->get_url() << endl;
     string url(req->get_url());
 
-    vector<string> *chain = req->get_chainlist_ref();
-    print_chainlist(*chain);
+    if (VERBOSE) {
+        vector<string> *chain = req->get_chainlist_ref();
+        print_chainlist(*chain);
+    }
 
 
     int next_ssfd = 0;
@@ -242,7 +244,7 @@ void* process_request(void *request) {
         cout << "Chainlist was empty...getting file... " << endl; 
         retrieve_file(url);
     } else {                                     // otherwise, select next ss
-        cout << "Chainlist was non-empty...stepping... " << endl; 
+        cout << "Chainlist was non-empty... " << endl; 
         next_ssfd = step_to_next(req);
         wait_for_file(req, next_ssfd);
     }
@@ -254,8 +256,7 @@ void* process_request(void *request) {
 
     FileTarget target(fn_unique);                       // create FileTarget from unique local filename
 
-    transmit_file(&target, req); 
-    
+    transmit_file(&target, req);                        // transmit file
 
     delete_local_file(fn_unique);                       // delete when complete
 
@@ -268,16 +269,24 @@ int transmit_file (FileTarget *target, FileRequest *req) {
     int sfd = req->get_socket(); 
     string fn = target->get_filename();
  
-    cout << "Transmitting file: " << fn << " on socket: " << sfd << endl;
+    if (VERBOSE) {
+        cout << "Relaying file: " << fn << " on socket: " << sfd << endl;
+    } else {
+        cout << "Relaying file... " << endl; 
+    }
 
     int chunks_to_send = target->get_num_chunks();
     int bytes_to_send = target->get_size();
     char* data = target->get_data();
 
-    cout << "File bytes to send: " << bytes_to_send << endl;
-    cout << "File chunks to send: " << chunks_to_send << endl;
+    if (VERBOSE) {
+        cout << "File bytes to send: " << bytes_to_send << endl;
+        cout << "File chunks to send: " << chunks_to_send << endl;
+    }
 
-    target->print();    
+    if (VERBOSE) {
+        target->print();    
+    }
 
     send_long(sfd, bytes_to_send);                // send header (filesize, number of chunks)
     send_long(sfd, chunks_to_send);
@@ -289,11 +298,15 @@ int transmit_file (FileTarget *target, FileRequest *req) {
         bytes_sent += chunk_size;
     }
 
+    cout << "File relay complete." << endl;
+
     return 0;
 }
 
 int delete_local_file (string fn) {
-    cout << "Deleting file: " << fn << endl;
+    if (VERBOSE) {
+        cout << "Deleting file: " << fn << endl;
+    }
     string command = "rm " + fn;
     system(command.c_str());
     return 0;

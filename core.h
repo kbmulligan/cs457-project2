@@ -8,7 +8,7 @@
 #include <algorithm>
 
 // CONSTANTS //////////////////////////////////////////////
-const bool VERBOSE = true;
+const bool VERBOSE = false;
 const int MAX_CHARS = 255;
 const int MAX_URL_SIZE = MAX_CHARS;
 const int BACKLOG = 1;
@@ -121,14 +121,21 @@ class FileTarget {
 
     public:
         FileTarget (std::string fn) {
-            std::cout << "Create File object..." << std::endl;
+
             filename = fn;
             ifs.open(filename.c_str(), std::fstream::in | std::fstream::binary); 
-            std::cout << "Filename: " << filename << std::endl;
+
+            if (VERBOSE) {
+                std::cout << "Create File object..." << std::endl;
+                std::cout << "Filename: " << filename << std::endl;
+            }
 
             if (ifs.good()) {
-                std::cout << "File is good..." << std::endl;
-                //chunkify();
+            
+                if (VERBOSE) {
+                    std::cout << "File is good..." << std::endl;
+                }
+
                 chunk_size = std::min(MAX_CHUNK_SIZE, get_size());
                 read_file();                                       // get into memory
 
@@ -146,13 +153,6 @@ class FileTarget {
             return filename;
         }
 
-        //std::vector<Chunk> get_chunks () {
-        //    return chunks;
-        //}
-
-        //int get_num_chunks () {
-        //    return chunks.size();
-        //}
 
         void print () {
             std::cout << "--- FileTarget ---" << std::endl;

@@ -74,35 +74,40 @@ int main (int argc, char* argv[]) {
    
     // read chainlist from file 
     string chainlist_str = read_chainfile(chainfile);
-    cout << chainlist_str << endl;
+    //cout << chainlist_str << endl;
 
     // parse and convert
     vector<string> chainlist = parse_chainlist(chainlist_str);
     chainlist = convert_delimiter(chainlist, IPPORT_FILE_DELIM, IPPORT_DELIM);
+    
+    cout << "Chainlist is: " << endl; 
     print_chainlist(chainlist);
 
     // repack and print 
     chainlist_str = pack_chainlist(chainlist);
-    cout << chainlist_str << endl;
-
-    // build request and print
-    //FileRequest req(url, chainlist.size(), chainlist);
-    //req.print();
+    //cout << chainlist_str << endl;
    
     // select next stepping stone 
-    cout << "Selecting next ss..." << endl;
+    cout << "Selecting stepping stone... ";
 
-    cout << "Size of chainlist: " << chainlist.size() << endl;
+    //cout << "Size of chainlist: " << chainlist.size() << endl;
     vector<string> ss = pick_rand_ss(&chainlist);    
-    cout << "Size of chainlist: " << chainlist.size() << endl;
+    //cout << "Size of chainlist: " << chainlist.size() << endl;
+
+    /*
+    if (!ss.empty()) {
+        cout << ss[0] << " : " << ss[1] << endl;
+    } else {
+        cout << "NONE!" << endl;
+    }
+    */
 
     //cout << "About to repack chainlist...do we get this far?" << endl;
     // stringify chainlist after stepping stone removal above
     chainlist_str = pack_chainlist(chainlist);
     
-    //cout << "Selected: " << ss[0] << " : " << ss[1] << endl;
 
-    cout << "Connecting..." << endl;
+    cout << "Connecting to next stepping stone..." << endl;
     
     int ssfd = connect_to_ss(ss);
 
@@ -115,7 +120,9 @@ int main (int argc, char* argv[]) {
         send_string(ssfd, chainlist_str);
     }
 
-    cout << "URL and chainlist sent!" << endl;
+    if (VERBOSE) {  
+        cout << "URL and chainlist sent!" << endl;
+    }
 
     FileRequest req(url, chainlist.size(), chainlist, 0);
     wait_for_file(&req, ssfd);
