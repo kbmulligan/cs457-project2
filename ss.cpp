@@ -43,8 +43,7 @@ int thread_request (FileRequest *req);
 void* process_request (void *request);
 
 int capture_file (string fn);
-int chunkify_file (string filename);
-int transmit_file (string fn, int sfd);
+int transmit_file (FileTarget *target, FileRequest *req);
 int delete_local_file (string fn);
 
 short int read_short (int connectionfd);
@@ -242,32 +241,41 @@ void* process_request(void *request) {
 
     string fn = local_filename(url);             // strips url to filename only
 
-    chunkify_file(fn);
+    FileTarget target(fn);                       // create FileTarget from local filename
 
-    transmit_file(fn, req->get_socket());
+    transmit_file(&target, req); 
 
-    delete_local_file(fn);
+    delete_local_file(fn);                       // delete when complete
     
 
     return 0;
 }
 
-int chunkify_file (string fn) {
-
-    cout << "Chunking file: " << fn << "(" << fn.size() << ")" << endl;
-
-    FileTarget package(fn);
-    cout << "File size: " << package.get_size() << endl;
-
-    return 0;
-}
-
-
-int transmit_file (string fn, int sfd) {
+int transmit_file (FileTarget *target, FileRequest *req) {
+ 
+    int sfd = req->get_socket(); 
+    string fn = target->get_filename();
+ 
     cout << "Transmitting file: " << fn << " on socket: " << sfd << endl;
 
-    int packetsize = 10;
-    send_short(sfd, packetsize);
+    int chunks_to_send = target->get_num_chunks();
+    int bytes_to_send = target->get_size();
+    char* data = target->get_data();
+
+    cout << "File bytes to send: " << bytes_to_send << endl;
+    cout << "File chunks to send: " << chunks_to_send << endl;
+
+    target->print();    
+
+    send_short(sfd, bytes_to_send);                // send header (filesize, number of chunks)
+    send_short(sfd, chunks_to_send);
+
+    int bytes_sent = 0;
+    for (unsigned int i = 0; i < chunks_to_send; i++) {
+        int chunk_size = target->get_chunk_size(i);
+        transmit_packet(sfd, &(data[bytes_sent]), chunk_size); 
+        bytes_sent += chunk_size;
+    }
 
     return 0;
 }
@@ -282,6 +290,6 @@ int delete_local_file (string fn) {
 // strips first part of URL, leaving only the filename with extension
 string local_filename (string filename) {
     int index = filename.rfind("/"); 
-    string fn = filename.substr( index + 1, filename.size() - (index + 2) );
+    string fn = filename.substr( index + 1, filename.size() - (index + 1) );
     return fn; 
 }

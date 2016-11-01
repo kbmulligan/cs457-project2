@@ -24,6 +24,7 @@
 #include <unistd.h>
 #include <pthread.h>
 #include <vector>
+#include <algorithm>
 
 #include "core.h"
 
@@ -107,12 +108,16 @@ string read_string (int connectionfd, int string_length) {
    
     cout << "Reading string... of length: " << string_length << " on socket: " << connectionfd << endl; 
 
-    char buffer[string_length];
+    char *buffer = (char *)malloc(string_length);
     int status = read(connectionfd, buffer, string_length); 
     if (status < string_length) {
        cout << "read_string didn't read it all! read: " << status << " bytes" << endl; 
     }
+
     string new_string(buffer);
+
+    free(buffer);
+
     return new_string;
 }
 
@@ -369,54 +374,78 @@ int wait_for_file (int sfd) {
 
     cout << "Waiting for file..." << endl;
 
-    // data buffer for whole file
-    int filesize = 0;
+    // housekeeping
+    short data_buffer_size = 0;
+    short chunks_read = 0;
+    short total_bytes_read = 0;
 
-    vector<Chunk> chunks;                           // this is where we stick the data
+    
+    short file_size = read_short(sfd);                     // read header (filesize, chunks)
+    short chunks_to_read = read_short(sfd);
+
+    cout << "Total file size expected: " << file_size << endl;
+    cout << "Chunks to read: " << chunks_to_read << endl;
+
+    // data buffer for whole file
+    char data_buffer[file_size];                           // initialize total filesize
+    memset(data_buffer, 0, file_size);
+    
+    char *data_marker = data_buffer;                       // initialize data marker
 
     short packet_size = read_short(sfd);
     while (packet_size > 0) {
         
         cout << "Reading packet data..." << endl;
+        cout << "Expecting packet of size: " << packet_size << " bytes..." << endl;
 
-        filesize += packet_size;                     // adjust filesize by packetsize
+        data_buffer_size += packet_size;                   // adjust filesize by packetsize
 
-        char *buffer = (char *)malloc(packet_size);  // allocate memory and read
+        char buffer[packet_size];                          // initilize memory and read
+        memset(buffer, 0, packet_size);
+
         int bytes_read = read(sfd, buffer, packet_size);
         if (bytes_read < packet_size) {
-            cout << "wait_for_file didn't read all of packet!" << endl;
+            cout << "wait_for_file didn't read all of packet! " << bytes_read << " bytes read" << endl;
+        } else {
+            cout << "Bytes read: " << bytes_read << endl;
         }
+        chunks_read += 1;
+        total_bytes_read += bytes_read;
 
-        Chunk new_chunk(buffer, packet_size);        // make new chunk
-        chunks.push_back(new_chunk);                 // append to vector
 
-        packet_size = read_short(sfd);               // prep for next round
+        // write the data we just read to buffer
+        data_marker = (char *)mempcpy(data_marker, buffer, packet_size);
+
+        if (chunks_read < chunks_to_read) {
+            packet_size = read_short(sfd);                     // prep for next round
+        } else {
+            packet_size = 0;
+        }
     } 
 
-    for (unsigned int i = 0; i < chunks.size(); i++) {
-        filesize += chunks[i].get_size();
+    cout << "Chunks read: " << chunks_read << endl;
+    cout << "Total file size: " << data_buffer_size << endl;
+
+    if (data_buffer_size < file_size) {
+        cout << "data_buffer_size < file_size so probably not all of file was received" << endl;
     }
 
-    cout << "Chunks read: " << chunks.size() << endl;
-    cout << "Total file size: " << filesize << endl;
+    write_file(data_buffer, data_buffer_size); 
 
-    write_file(chunks); 
 
     return 0;
 }
 
-int write_file (vector<Chunk> chunks) {
+int write_file (char* buffer, int buffer_size) {
 
     cout << "Writing file... " << endl;
 
-    fstream ofile("package.file", ios::binary | ios::out | ios::app);
+    fstream ofile("target.file", fstream::binary | fstream::out);
 
     if ( !ofile.is_open() ) {
         cout << "File is not open...probably error opening file" << endl;
     } else {
-        for (unsigned int i = 0; i < chunks.size(); i++) {
-            ofile.write(chunks[i].get_data(), chunks[i].get_size());
-        }
+        ofile.write(buffer, buffer_size);
     }
 
     ofile.close();
@@ -430,6 +459,21 @@ int write_file (vector<Chunk> chunks) {
 int receive_packet (int sfd) {
 
     
+
+    return 0;
+}
+
+int transmit_packet (int sfd, char* data, int size) {
+
+    send_short(sfd, size);                               // send packetsize
+
+    int flags = 0;
+    int status = send(sfd, data, size, flags);           // send data 
+    if (status < size) {
+        cout << "transmit_packet: not all data sent, status: " << status << endl;
+    } else {
+        cout << "Packet sent, size: " << size  << endl;
+    }
 
     return 0;
 }
