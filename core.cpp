@@ -103,13 +103,32 @@ int send_short (int connectionfd, short data) {
     return 0; 
 }
 
+long read_long (int connectionfd) { 
+    long data = 0;
+    int bytes_received = recv(connectionfd, &data, sizeof(data), 0);
+    if (bytes_received == -1) {
+        cout << "read_long: recv returned -1" << endl;
+    }
+    return ntohl(data);
+}
+
+int send_long (int connectionfd, long data) { 
+    long net_data = htonl(data);
+    int bytes_sent = send(connectionfd, &net_data, sizeof(net_data), 0);
+    if (bytes_sent == -1) {
+        cout << "send_long: send returned -1" << endl;
+    }
+    return 0; 
+}
+
 // reads string_legnth bytes of data from socket connectionfd and returns it as string
 string read_string (int connectionfd, int string_length) {
    
     cout << "Reading string... of length: " << string_length << " on socket: " << connectionfd << endl; 
 
+    int flags = 0;
     char *buffer = (char *)malloc(string_length);
-    int status = read(connectionfd, buffer, string_length); 
+    int status = recv(connectionfd, buffer, string_length, flags); 
     if (status < string_length) {
        cout << "read_string didn't read it all! read: " << status << " bytes" << endl; 
     }
@@ -185,7 +204,7 @@ vector<string> parse_socketpair (string raw_data, char delim) {
         socketpair.push_back(item);
     }
  
-    cout << "parse_socketpair: " << socketpair[0] << " " << socketpair[1] << endl;    
+    //cout << "parse_socketpair: " << socketpair[0] << " " << socketpair[1] << endl;    
     return socketpair;
 }
 
@@ -368,20 +387,25 @@ int connect_to_ss (vector<string> ss) {
     return sockfd;
 }
 
-
+// waits for header of format [FILESIZE, PACKET CHUNKS]
 // waits for packets sent in the format [SIZE, DATA...]
-int wait_for_file (int sfd) {
+int wait_for_file (FileRequest* req, int socketfd) {
 
     cout << "Waiting for file..." << endl;
 
-    // housekeeping
-    short data_buffer_size = 0;
-    short chunks_read = 0;
-    short total_bytes_read = 0;
+    int sfd = socketfd;
 
+    // housekeeping
+    int data_buffer_size = 0;
+    int chunks_read = 0;
+    int total_bytes_read = 0;
+
+    int fails = 0;
+
+    int flags = 0;
     
-    short file_size = read_short(sfd);                     // read header (filesize, chunks)
-    short chunks_to_read = read_short(sfd);
+    long file_size = read_long(sfd);                     // read header (filesize, chunks)
+    long chunks_to_read = read_long(sfd);
 
     cout << "Total file size expected: " << file_size << endl;
     cout << "Chunks to read: " << chunks_to_read << endl;
@@ -403,44 +427,62 @@ int wait_for_file (int sfd) {
         char buffer[packet_size];                          // initilize memory and read
         memset(buffer, 0, packet_size);
 
-        int bytes_read = read(sfd, buffer, packet_size);
-        if (bytes_read < packet_size) {
-            cout << "wait_for_file didn't read all of packet! " << bytes_read << " bytes read" << endl;
-        } else {
-            cout << "Bytes read: " << bytes_read << endl;
+        int packet_bytes_read = 0;
+        int bytes_read = 0;
+
+        while (packet_bytes_read < packet_size && fails < MAX_FAILS && total_bytes_read < file_size) {
+
+            bytes_read = recv(sfd, buffer, packet_size - bytes_read, flags);
+
+            packet_bytes_read += bytes_read;
+            total_bytes_read += bytes_read;
+
+            if (packet_bytes_read < packet_size) {
+                cout << "wait_for_file didn't read all of packet! " << bytes_read << " bytes read" << endl;
+                fails++;
+                
+                if (bytes_read == 0) {
+                    cout << "Connection was shutdown!" << endl;
+                    break;
+                }
+
+            } else {
+                cout << "Bytes read: " << bytes_read << endl;
+            }
+
+            // write the data we just read to buffer
+            data_marker = (char *)mempcpy(data_marker, buffer, bytes_read);
+
         }
         chunks_read += 1;
-        total_bytes_read += bytes_read;
+        cout << "Packet bytes read: " << packet_bytes_read << endl;
 
-
-        // write the data we just read to buffer
-        data_marker = (char *)mempcpy(data_marker, buffer, packet_size);
 
         if (chunks_read < chunks_to_read) {
-            packet_size = read_short(sfd);                     // prep for next round
+            packet_size = read_short(sfd);                     // read next packet header
         } else {
             packet_size = 0;
         }
     } 
 
     cout << "Chunks read: " << chunks_read << endl;
-    cout << "Total file size: " << data_buffer_size << endl;
+    cout << "Total file size: " << total_bytes_read << endl;
 
-    if (data_buffer_size < file_size) {
-        cout << "data_buffer_size < file_size so probably not all of file was received" << endl;
+    if (total_bytes_read < file_size) {
+        cout << "total_bytes_read < file_size so probably not all of file was received" << endl;
     }
 
-    write_file(data_buffer, data_buffer_size); 
-
+    string output_fn = local_filename(req->get_url());
+    write_file(data_buffer, total_bytes_read, output_fn); 
 
     return 0;
 }
 
-int write_file (char* buffer, int buffer_size) {
+int write_file (char* buffer, int buffer_size, string fn) {
 
     cout << "Writing file... " << endl;
 
-    fstream ofile("target.file", fstream::binary | fstream::out);
+    fstream ofile(fn.c_str(), fstream::binary | fstream::out);
 
     if ( !ofile.is_open() ) {
         cout << "File is not open...probably error opening file" << endl;
@@ -476,4 +518,17 @@ int transmit_packet (int sfd, char* data, int size) {
     }
 
     return 0;
+}
+
+// strips first part of URL, leaving only the filename with extension
+string local_filename (string filename) {
+    int index = filename.rfind("/"); 
+    string fn = filename.substr( index + 1, filename.size() - (index + 1) );
+    return fn; 
+}
+
+void print_chainlist (vector<string> chain) {
+    for (string str : chain) {
+        cout << str << endl;
+    }
 }

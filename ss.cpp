@@ -189,10 +189,12 @@ int read_request(int connectionfd) {
     string requested_url = read_string(connectionfd, length_url);
 
     // receive chainfile
-    vector<string> chainlist;
+    string chainlist_str;
     if (length_chainlist > 0) {
-        string chainlist_str = read_string(connectionfd, length_chainlist);
+        chainlist_str = read_string(connectionfd, length_chainlist);
     }
+
+    vector<string> chainlist = parse_chainlist(chainlist_str);
 
     // build request
     FileRequest req(requested_url, chainlist.size(), chainlist, connectionfd);
@@ -230,24 +232,34 @@ void* process_request(void *request) {
     cout << "FileRequest.url = " << req->get_url() << endl;
     string url(req->get_url());
 
+    vector<string> *chain = req->get_chainlist_ref();
+    print_chainlist(*chain);
+
+
+    int next_ssfd = 0;
+
     if (req->get_chainlist_ref()->empty()) {     // get file if no more steping stones 
         cout << "Chainlist was empty...getting file... " << endl; 
-        retrieve_file(url);       
+        retrieve_file(url);
     } else {                                     // otherwise, select next ss
         cout << "Chainlist was non-empty...stepping... " << endl; 
-        int ssfd = step_to_next(req);
-        wait_for_file(ssfd);
+        next_ssfd = step_to_next(req);
+        wait_for_file(req, next_ssfd);
     }
 
-    string fn = local_filename(url);             // strips url to filename only
+    string fn = local_filename(url);                          // strips url to filename only
+    string fn_unique = local_filename(url) + "-" + get_ip();  // create unique local filename            
+    string command = "mv " + fn + " " + fn_unique;
+    system(command.c_str()); 
 
-    FileTarget target(fn);                       // create FileTarget from local filename
+    FileTarget target(fn_unique);                       // create FileTarget from unique local filename
 
     transmit_file(&target, req); 
-
-    delete_local_file(fn);                       // delete when complete
     
 
+    delete_local_file(fn_unique);                       // delete when complete
+
+    close(next_ssfd);
     return 0;
 }
 
@@ -267,8 +279,8 @@ int transmit_file (FileTarget *target, FileRequest *req) {
 
     target->print();    
 
-    send_short(sfd, bytes_to_send);                // send header (filesize, number of chunks)
-    send_short(sfd, chunks_to_send);
+    send_long(sfd, bytes_to_send);                // send header (filesize, number of chunks)
+    send_long(sfd, chunks_to_send);
 
     int bytes_sent = 0;
     for (unsigned int i = 0; i < chunks_to_send; i++) {
@@ -287,9 +299,3 @@ int delete_local_file (string fn) {
     return 0;
 }
 
-// strips first part of URL, leaving only the filename with extension
-string local_filename (string filename) {
-    int index = filename.rfind("/"); 
-    string fn = filename.substr( index + 1, filename.size() - (index + 1) );
-    return fn; 
-}

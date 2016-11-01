@@ -19,8 +19,8 @@ const std::string DEFAULT_CHAINFILE("chaingang.txt");
 const char IPPORT_DELIM = ':';
 const char IPPORT_FILE_DELIM = ' ';
 const char CHAINLIST_DELIM = ',';
-
-const int MAX_CHUNK_SIZE = 1000;
+const int MAX_FAILS = 100;
+const int MAX_CHUNK_SIZE = 512;
 
 class Chainlist;
 class FileRequest;
@@ -207,8 +207,14 @@ class FileTarget {
             return num_chunks;
         }
 
-        int get_chunk_size(int chunk) {
-            return chunk_size;
+        int get_chunk_size(int chunk) {                    // chunk size different for last chunk
+            int this_chunk_size = chunk_size;
+
+            if (chunk >= get_num_chunks() - 1) {
+                this_chunk_size = get_size() - ((get_num_chunks() - 1) * chunk_size);
+            }
+
+            return this_chunk_size;
         }
 
         int get_size () {
@@ -236,6 +242,8 @@ int read_request (int connectionfd);
 
 short read_short (int connectionfd);
 int send_short (int connectionfd, short data);
+long read_long (int connectionfd);
+int send_long (int connectionfd, long data);
 std::string read_string (int connectionfd, int string_len);
 int send_string (int connectionfd, std::string str);
 
@@ -251,11 +259,14 @@ std::vector<std::string> pick_rand_ss (std::vector<std::string> *chainlist);
 
 int connect_to_ss (std::vector<std::string> ss);
 
-int wait_for_file (int sfd);
+int wait_for_file (FileRequest* req, int sfd);
 
 int receive_packet (int sfd);
 
-int write_file (char* buffer, int buffer_size);
+int write_file (char* buffer, int buffer_size, std::string fn);
 int transmit_packet (int sfd, char* data, int size);
+
+std::string local_filename (std::string filename);
+void print_chainlist(std::vector<std::string> chain);
 
 #endif
